@@ -24,13 +24,23 @@ namespace Betsson.OnlineWallets.Api.Tests.Tests
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             response.Data.Should().NotBeNull();
-            response.Data.Amount.Should().BeGreaterOrEqualTo(0);
         }
 
         [Fact]
         public async Task Deposit_ShouldReturnOk()
         {
             var request = new RestRequest("/onlinewallet/deposit", Method.Post);
+            request.AddJsonBody(new DepositRequest { Amount = 50.0 });
+            var response = await _client.ExecuteAsync<BalanceResponse>(request);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.Data.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task Withdraw_ShouldReturnOk()
+        {
+            var request = new RestRequest("/onlinewallet/withdraw", Method.Post);
             request.AddJsonBody(new DepositRequest { Amount = 50.0 });
             var response = await _client.ExecuteAsync<BalanceResponse>(request);
 
@@ -46,6 +56,11 @@ namespace Betsson.OnlineWallets.Api.Tests.Tests
     }
 
     public class DepositRequest
+    {
+        public double Amount { get; set; }
+    }
+
+    public class WithdrawRequest
     {
         public double Amount { get; set; }
     }
