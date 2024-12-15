@@ -77,15 +77,36 @@ namespace Betsson.OnlineWallets.Api.Tests.Tests
         [Fact]
         public async Task Withdraw_ShouldReturnOk()
         {
+            var depositRequest = new RestRequest("/onlinewallet/deposit", Method.Post);
+            depositRequest.AddJsonBody(new DepositRequest { Amount = 100.0 });
+            var depositResponse = await _client.ExecuteAsync<BalanceResponse>(depositRequest);
+            var withdrawRequest = new RestRequest("/onlinewallet/withdraw", Method.Post);
+            withdrawRequest.AddJsonBody(new WithdrawRequest { Amount = 50.0 });
+            var withdrawResponse = await _client.ExecuteAsync<BalanceResponse>(withdrawRequest);
+
+            withdrawResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            withdrawResponse.Data.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task Withdraw_Overdrawn_ShouldReturnBadRequest()
+        {
             var request = new RestRequest("/onlinewallet/withdraw", Method.Post);
-            request.AddJsonBody(new DepositRequest { Amount = 50.0 });
+            request.AddJsonBody(new WithdrawRequest { Amount = 100.0 });
             var response = await _client.ExecuteAsync<BalanceResponse>(request);
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-            response.Data.Should().NotBeNull();
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
         }
 
     }
+
+    public class ErrorResponse
+        {
+            public string Type { get; set; }
+            public string Title { get; set; }
+            public int Status { get; set; }
+        }
 
     public class BalanceResponse
     {
