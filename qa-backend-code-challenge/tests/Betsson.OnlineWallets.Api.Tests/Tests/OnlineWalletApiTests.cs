@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Betsson.OnlineWallets.Api.Tests.Fixtures;
 using FluentAssertions;
@@ -61,31 +62,45 @@ namespace Betsson.OnlineWallets.Api.Tests.Tests
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             response.Data.Should().NotBeNull();
+            response.Data.Amount.Should().Be(0);
         }
 
         [Fact]
         public async Task Deposit_ShouldReturnOk()
         {
+            var depositAmount = 100.0;
             var request = new RestRequest("/onlinewallet/deposit", Method.Post);
-            request.AddJsonBody(new DepositRequest { Amount = 100.0 });
+            request.AddJsonBody(new DepositRequest { Amount = depositAmount});
             var response = await _client.ExecuteAsync<BalanceResponse>(request);
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             response.Data.Should().NotBeNull();
+            response.Data.Amount.Should().Be(depositAmount);
         }
 
         [Fact]
         public async Task Withdraw_ShouldReturnOk()
         {
+            var depositAmount = 50.0;
+            var withdrawAmount = 50.0;
+
+            // deposit funds to ensure there is enough balance
             var depositRequest = new RestRequest("/onlinewallet/deposit", Method.Post);
-            depositRequest.AddJsonBody(new DepositRequest { Amount = 100.0 });
+            depositRequest.AddJsonBody(new DepositRequest { Amount = depositAmount });
             var depositResponse = await _client.ExecuteAsync<BalanceResponse>(depositRequest);
+
+            depositResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            depositResponse.Data.Should().NotBeNull();
+            depositResponse.Data.Amount.Should().Be(depositAmount);
+
+            // Witdhraw the same amount to reset to zero
             var withdrawRequest = new RestRequest("/onlinewallet/withdraw", Method.Post);
-            withdrawRequest.AddJsonBody(new WithdrawRequest { Amount = 50.0 });
+            withdrawRequest.AddJsonBody(new WithdrawRequest { Amount = withdrawAmount });
             var withdrawResponse = await _client.ExecuteAsync<BalanceResponse>(withdrawRequest);
 
             withdrawResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             withdrawResponse.Data.Should().NotBeNull();
+            withdrawResponse.Data.Amount.Should().Be(0);
         }
 
         [Fact]
@@ -96,7 +111,13 @@ namespace Betsson.OnlineWallets.Api.Tests.Tests
             var response = await _client.ExecuteAsync<BalanceResponse>(request);
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
+            response.Content.Should().NotBeNullOrEmpty();
+            var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            errorResponse.Should().NotBeNull();
+            errorResponse.Title.Should().Be("Invalid withdrawal amount. There are insufficient funds.");
         }
 
     }
